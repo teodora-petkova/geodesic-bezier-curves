@@ -1,0 +1,18 @@
+name: cgal-wasm
+
+services:
+  compiler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CGAL_VERSION: "6.2.1"
+        BOOST_VERSION: "1.81.0"
+    image: local/cgal-wasm:6.2.1
+    container_name: cgal-wasm-compiler
+    working_dir: /src
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./:/src
+    command: ["sleep", "infinity"]

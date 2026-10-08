@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Python Server",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "http.server", "8081"],
+      "isBackground": true,
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "."
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Serving HTTP on",
+          "endsPattern": "port 8081"
+        }
+      }
+    }
+  ]
+}

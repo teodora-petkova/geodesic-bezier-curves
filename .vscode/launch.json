@@ -1,0 +1,36 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Demo in Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:8081/index.html",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "preLaunchTask": "Start Python Server",
+      "skipFiles": ["<node_internals>/**", "**/npm/lil-gui*", "**/three*"] 
+    },
+    {
+      "name": "Debug Demo in Firefox",
+      "type": "firefox",
+      "request": "launch",
+      "reAttach": true,
+      "url": "http://localhost:8081/index.html",
+      "webRoot": "${workspaceFolder}",
+      "preLaunchTask": "Start Python Server"
+    },
+    {
+      "name": "Launch tests",
+      // "type": "firefox",
+      "type": "chrome",
+      "request": "launch",
+      "file": "${workspaceFolder}/tests/test.html",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "/*": "${workspaceFolder}/*"
+      }
+    },
+  ]
+}
