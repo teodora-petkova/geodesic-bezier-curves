@@ -1,15 +1,17 @@
 import { CGALAdapter } from "./cgal_adapter.js";
 import { SurfacePoint } from "./surface-point.js";
+import { MeshInteractionManager } from "./mobile-interaction-manager.js";
+
 // import the factory function from emscripten-generated js file
 import wasmFactory from "../cgal_wasm/compiled/geodesics.js";
 
 export class SceneApp {
     constructor() {
-        let scene, camera, renderer, raycaster, mouse, controls;
+        let scene, camera, renderer, controls;
         let loadedMesh, geodesicLineMesh;
         let startMarker, endMarker;
 
-        // Use cloneable Vector3 blocks to completely eliminate property parsing errors
+        // use cloneable Vector3 blocks to completely eliminate property parsing errors
         let startPoint = null;
         let endPoint = null;
 
@@ -50,10 +52,6 @@ export class SceneApp {
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.05;
-
-        this.raycaster = new THREE.Raycaster();
-        this.mouse = new THREE.Vector2();
-        console.log(this.mouse);
 
         const light1 = new THREE.DirectionalLight(0xffffff, 1);
         light1.position.set(5, 10, 10).normalize();
@@ -130,46 +128,46 @@ export class SceneApp {
     }
 
     loadMesh(mesh) {
-            this.loadedMesh = mesh;
-            
-            this.loadedMesh.material = new THREE.MeshPhongMaterial({
-                color: 0x4bb47e,
-                flatShading: true,
-                side: THREE.DoubleSide,
-            });
+        this.loadedMesh = mesh;
+
+        this.loadedMesh.material = new THREE.MeshPhongMaterial({
+            color: 0x4bb47e,
+            flatShading: true,
+            side: THREE.DoubleSide,
+        });
 
 
-            const wireMaterial = new THREE.MeshBasicMaterial({
-                wireframe: true,
-                transparent: true,
-                opacity: 0.3,
-            });
-            // console.log(this.loadedMesh.geometry);
+        const wireMaterial = new THREE.MeshBasicMaterial({
+            wireframe: true,
+            transparent: true,
+            opacity: 0.3,
+        });
+        // console.log(this.loadedMesh.geometry);
 
-            let visualWireframe = new THREE.Mesh(this.loadedMesh.geometry, wireMaterial);
+        let visualWireframe = new THREE.Mesh(this.loadedMesh.geometry, wireMaterial);
 
-            // center the model inside the view
-            this.loadedMesh.geometry.center();
+        // center the model inside the view
+        this.loadedMesh.geometry.center();
 
-            // add the model to the workspace canvas
-            this.scene.add(this.loadedMesh);
-            this.scene.add(visualWireframe);
+        // add the model to the workspace canvas
+        this.scene.add(this.loadedMesh);
+        this.scene.add(visualWireframe);
 
-            this.cgalUploadMesh(this.loadedMesh);
+        this.cgalUploadMesh(this.loadedMesh);
 
-            const size = new THREE.Vector3();
-            this.loadedMesh.geometry.boundingBox.getSize(size);
-            const maxDimension = Math.max(size.x, size.y, size.z);
+        const size = new THREE.Vector3();
+        this.loadedMesh.geometry.boundingBox.getSize(size);
+        const maxDimension = Math.max(size.x, size.y, size.z);
 
-            // set dot radius to roughly 1% of the model's total size
-            const dynamicScale = maxDimension * 0.01;
-            this.startMarker.scale.set(dynamicScale, dynamicScale, dynamicScale);
-            this.endMarker.scale.set(dynamicScale, dynamicScale, dynamicScale);
+        // set dot radius to roughly 1% of the model's total size
+        const dynamicScale = maxDimension * 0.01;
+        this.startMarker.scale.set(dynamicScale, dynamicScale, dynamicScale);
+        this.endMarker.scale.set(dynamicScale, dynamicScale, dynamicScale);
 
-            // dynamically push the camera back so the model fits on screen perfectly
-            this.camera.position.set(0, 0, maxDimension * 2);
-            if (this.controls) this.controls.target.set(0, 0, 0);
-        
+        // dynamically push the camera back so the model fits on screen perfectly
+        this.camera.position.set(0, 0, maxDimension * 2);
+        if (this.controls) this.controls.target.set(0, 0, 0);
+
     }
 
     cgalUploadMesh(mesh) {
@@ -187,93 +185,77 @@ export class SceneApp {
         this.cgalAdapter.uploadMesh(positions, jsFaces);
     }
 
-    onSurfaceClick(event) {
-        if (!this.mouse) {
-            console.warn("Scene or mouse mapping not ready yet!");
-            return;
-        }
-        // if (controls.state !== -1) return; // Skip if user was rotating
+    handleMeshIntersection(hit) {
 
-        this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        // mapped face index from the raycaster hit point
+        const faceIndex = hit.faceIndex;
+        const geometry = this.loadedMesh.geometry;
+        const positions = geometry.attributes.position;
 
-        this.raycaster.setFromCamera(this.mouse, this.camera);
+        // 2. Fetch the 3 exact global Vector3 coordinates bounding this specific triangle
+        const vA = new THREE.Vector3().fromBufferAttribute(
+            positions,
+            hit.face.a
+        );
+        const vB = new THREE.Vector3().fromBufferAttribute(
+            positions,
+            hit.face.b
+        );
+        const vC = new THREE.Vector3().fromBufferAttribute(
+            positions,
+            hit.face.c
+        );
 
-        const intersects = this.raycaster.intersectObject(this.loadedMesh);
+        // 3. Use THREE.Triangle to calculate barycentric coordinates from the hit point
+        const triangle = new THREE.Triangle(vA, vB, vC);
+        const barycentricTarget = new THREE.Vector3();
 
-        if (intersects.length > 0) {
-            const hit = intersects[0]; // Extract the closest intersection details
+        // This calculates the weights and saves them into barycentricTarget
+        triangle.getBarycoord(hit.point, barycentricTarget);
 
-            const faceIndex = hit.faceIndex; // 1. Mapped Face Index from the Raycaster
-            const geometry = this.loadedMesh.geometry;
-            const positions = geometry.attributes.position;
+        const w0 = barycentricTarget.x;
+        const w1 = barycentricTarget.y;
+        const w2 = barycentricTarget.z;
 
-            // 2. Fetch the 3 exact global Vector3 coordinates bounding this specific triangle
-            const vA = new THREE.Vector3().fromBufferAttribute(
-                positions,
-                hit.face.a
+        if (!this.savedStartFace) {
+            // Lock your start coordinates
+            this.savedStartFace = faceIndex;
+            this.savedStartBary = [w0, w1, w2];
+
+            this.startMarker.position.copy(hit.point);
+            this.startMarker.visible = true;
+            this.endMarker.visible = false;
+        } else {
+            // Lock your end coordinates
+            this.endMarker.position.copy(hit.point);
+            this.endMarker.visible = true;
+
+            const surfacePoint1 = new SurfacePoint("face", { index: this.savedStartFace }, this.savedStartBary);
+            const surfacePoint2 = new SurfacePoint("face", { index: faceIndex }, [w0, w1, w2]);
+            const pathCoordinates = this.cgalAdapter.computeGeodesicPath(surfacePoint1, surfacePoint2);
+
+            this.geodesicLineMesh.geometry.setAttribute(
+                "position",
+                new THREE.BufferAttribute(pathCoordinates, 3)
             );
-            const vB = new THREE.Vector3().fromBufferAttribute(
-                positions,
-                hit.face.b
-            );
-            const vC = new THREE.Vector3().fromBufferAttribute(
-                positions,
-                hit.face.c
-            );
+            this.geodesicLineMesh.geometry.computeBoundingBox();
+            this.geodesicLineMesh.geometry.computeBoundingSphere();
+            this.geodesicLineMesh.geometry.attributes.position.needsUpdate = true;
+            // }
 
-            // 3. Use THREE.Triangle to calculate barycentric coordinates from the hit point
-            const triangle = new THREE.Triangle(vA, vB, vC);
-            const barycentricTarget = new THREE.Vector3();
-
-            // This calculates the weights and saves them into barycentricTarget
-            triangle.getBarycoord(hit.point, barycentricTarget);
-
-            const w0 = barycentricTarget.x;
-            const w1 = barycentricTarget.y;
-            const w2 = barycentricTarget.z;
-
-            if (!this.savedStartFace) {
-                // Lock your start coordinates
-                this.savedStartFace = faceIndex;
-                this.savedStartBary = [w0, w1, w2];
-
-                this.startMarker.position.copy(hit.point);
-                this.startMarker.visible = true;
-                this.endMarker.visible = false;
-            } else {
-                // Lock your end coordinates
-                this.endMarker.position.copy(hit.point);
-                this.endMarker.visible = true;
-
-                const surfacePoint1 = new SurfacePoint("face", { index: this.savedStartFace }, this.savedStartBary);
-                const surfacePoint2 = new SurfacePoint("face", { index: faceIndex }, [w0, w1, w2]);
-                const pathCoordinates = this.cgalAdapter.computeGeodesicPath(surfacePoint1, surfacePoint2);
-
-                this.geodesicLineMesh.geometry.setAttribute(
-                    "position",
-                    new THREE.BufferAttribute(pathCoordinates, 3)
-                );
-                this.geodesicLineMesh.geometry.computeBoundingBox();
-                this.geodesicLineMesh.geometry.computeBoundingSphere();
-                this.geodesicLineMesh.geometry.attributes.position.needsUpdate = true;
-                // }
-
-                // Reset variables for subsequent path queries
-                this.savedStartFace = null;
-                this.savedStartBary = null;
-            }
-        }
-        else {
-            console.log("Clicked on empty space, ignoring.");
-            return; // Stop the function here so it doesn't pass null down the line
+            // Reset variables for subsequent path queries
+            this.savedStartFace = null;
+            this.savedStartBary = null;
         }
     }
 
     bindUI() {
-        // attach clean event handlers
-        window.addEventListener("click",
-            (e) => this.onSurfaceClick(e));
+        this.interactionManager = new MeshInteractionManager(
+            this.renderer,
+            this.scene,
+            this.camera,
+            (h) => this.handleMeshIntersection(h)
+        );
 
         window.addEventListener("resize", () => {
             if (!this.camera) return;
