@@ -6,6 +6,7 @@ ARG BOOST_UNDERSCORE=1_81_0
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+        gdb \
         wget \
         unzip \
         tar \

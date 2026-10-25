@@ -1,3 +1,17 @@
+export class BareSurfacePoint {
+  // type: "vertex" | "edge" | "face"
+  // element: Vertex | Halfedge | Face
+  // bary:
+  //   - vertex: null
+  //   - edge: { t } with t in [0,1]
+  //   - face: { b0, b1, b2 } with b0+b1+b2=1
+  constructor(type, elementIndex, bary = null) {
+    this.type = type;
+    this.elementIndex = elementIndex;
+    this.bary = bary;
+  }
+}
+
 // SurfacePoint.js
 export class SurfacePoint {
   // type: "vertex" | "edge" | "face"
@@ -47,5 +61,10 @@ export class SurfacePoint {
     }
 
     throw new Error(`Unknown SurfacePoint type: ${this.type}`);
+  }
+
+  toBare()
+  {
+    return new BareSurfacePoint(this.type, this.element.index, this.bary);
   }
 }

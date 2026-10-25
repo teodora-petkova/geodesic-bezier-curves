@@ -25,7 +25,15 @@ Emcc uses Clang and LLVM to compile to WebAssembly. Emcc also emits JavaScript t
 The Emscripten SDK is used to install the entire toolchain, including emcc and LLVM and so forth. The Emscripten SDK (emsdk) can be used on Linux, Windows or MacOS.
 
 
+Notes about WASM types:
 
+Quick Rule of Thumb for Other Types
+
+The shift value changes depending on how many bytes the data type uses:
+• HEAP8 (1 byte): No shift needed (>> 0)
+• HEAP16 (2 bytes): Shift by 1 (>> 1)
+• HEAPF32 / HEAP32 (4 bytes): Shift by 2 (>> 2)
+• HEAPF64 (8 bytes): Shift by 3 (>> 3)
 
 
 

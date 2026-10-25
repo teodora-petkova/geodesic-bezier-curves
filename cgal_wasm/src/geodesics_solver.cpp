@@ -3,6 +3,8 @@
 
 #include <cmath>
 #include <stdexcept>
+#include <iostream>
+#include <cstdio>
 
 namespace
 {
@@ -32,6 +34,8 @@ void GeodesicSolver::init(
     const int *faces,
     int face_count)
 {
+    std::setvbuf(stdout, NULL, _IONBF, 0);
+
     if (!vertices || !faces ||
         vertex_count < 0 ||
         face_count < 0)
@@ -40,7 +44,7 @@ void GeodesicSolver::init(
     }
 
     mesh_.clear();
-    path_buffer_.clear();
+    unified_path_buffer_.clear();
 
     delete solver_;
     solver_ = nullptr;
@@ -78,6 +82,8 @@ void GeodesicSolver::init(
                             static_cast<std::size_t>(c)});
     }
 
+    // Repairing/orienting can modify element topologies and sequence IDs.
+
     CGAL::Polygon_mesh_processing::repair_polygon_soup(
         points,
         polygons);
@@ -90,7 +96,6 @@ void GeodesicSolver::init(
         points,
         polygons,
         mesh_);
-
 
     solver_ = new Solver(mesh_);
 }
@@ -108,10 +113,9 @@ int GeodesicSolver::compute_path(
     if (!solver_)
         return 0;
 
-    if (start_face_idx < 0 ||
-        end_face_idx < 0 ||
-        start_face_idx >= static_cast<int>(mesh_.number_of_faces()) ||
-        end_face_idx >= static_cast<int>(mesh_.number_of_faces()))
+    int total_faces = static_cast<int>(mesh_.number_of_faces());
+    if (start_face_idx < 0 || end_face_idx < 0 ||
+        start_face_idx >= total_faces || end_face_idx >= total_faces)
     {
         return 0;
     }
@@ -122,59 +126,158 @@ int GeodesicSolver::compute_path(
         return 0;
     }
 
-    path_buffer_.clear();
-
-    Traits::Barycentric_coordinates start_bary =
-        {{start_b0, start_b1, start_b2}};
-
-    Traits::Barycentric_coordinates end_bary =
-        {{end_b0, end_b1, end_b2}};
-
+    // clear both persistent buffers
+    unified_path_buffer_.clear();
     solver_->clear();
 
-    solver_->add_source_point(
-        Mesh::Face_index(start_face_idx),
-        start_bary);
+    Traits::Barycentric_coordinates start_bary = {{start_b0, start_b1, start_b2}};
+    Traits::Barycentric_coordinates end_bary = {{end_b0, end_b1, end_b2}};
+
+    // map the indices to the true CGAL face handles safely
+    auto face_range = CGAL::faces(mesh_);
+    auto start_face_it = std::next(face_range.begin(), start_face_idx);
+    auto end_face_it = std::next(face_range.begin(), end_face_idx);
+
+    
+    // solver_->add_source_point(Mesh::Face_index(start_face_idx), start_bary);
+    // solver_->add_source_point(*start_face_it, start_bary);
+    
+    // =========================================================================
+    // WORKAROUND FOR CGAL BUG #9646: Detect exact vertex inputs and inject safely
+    // =========================================================================
+    constexpr float eps = 1e-4f;
+    bool start_is_vertex = false;
+    vertex_descriptor start_v;
+
+    // Check if the source point is exactly on a vertex corner
+    int local_idx = -1;
+    if (std::abs(start_b0 - 1.0f) < eps) local_idx = 0;
+    else if (std::abs(start_b1 - 1.0f) < eps) local_idx = 1;
+    else if (std::abs(start_b2 - 1.0f) < eps) local_idx = 2;
+
+    if (local_idx >= 0) {
+        int i = 0;
+        for (auto he : CGAL::halfedges_around_face(halfedge(*start_face_it, mesh_), mesh_)) {
+            if (i == local_idx) {
+                start_v = CGAL::target(he, mesh_);
+                start_is_vertex = true;
+                break;
+            }
+            i++;
+        }
+    }
+
+    // Add source point using the safe type representation
+    if (start_is_vertex) {
+        solver_->add_source_point(start_v); // Directly adding vertex avoids CGAL bug!
+    } else {
+        Traits::Barycentric_coordinates start_bary = {{ start_b0, start_b1, start_b2 }};
+        solver_->add_source_point(*start_face_it, start_bary);
+    }
+    // =========================================================================
 
     solver_->build_sequence_tree();
 
-    std::vector<Kernel::Point_3> path_points;
+    LocalSequenceCollector sequence_collector;
 
-    solver_->shortest_path_points_to_source_points(
-        Mesh::Face_index(end_face_idx),
+    // Fetch the topological surface positions from CGAL
+    solver_->shortest_path_sequence_to_source_points(
+        // Mesh::Face_index(end_face_idx),
+        *end_face_it,
         end_bary,
-        std::back_inserter(path_points));
+        sequence_collector);
 
-    path_buffer_.reserve(path_points.size() * 3);
+    size_t step_count = sequence_collector.sequence.size();
+    int point_count = static_cast<int>(step_count);
 
-    for (const auto &point : path_points)
+    // pre-allocate space for optimal performance
+    unified_path_buffer_.reserve(point_count * 5); // 3 for Barycentric, 1 for face and 1 for type
+
+    // std::cout << "point_count: " << point_count << std::endl;
+
+    if (step_count == 0)
+        return 0;
+
+    // Every step takes exactly 5 float-sized slots
+    unified_path_buffer_.reserve(step_count * 5);
+
+    auto unpack_visitor = [this](auto &&arg)
     {
-        path_buffer_.push_back(
-            static_cast<float>(point.x()));
+        using T = std::decay_t<decltype(arg)>;
 
-        path_buffer_.push_back(
-            static_cast<float>(point.y()));
+        if constexpr (std::is_same_v<T, vertex_descriptor>)
+        {
+            unified_path_buffer_.push_back(0.0f); // Type: 0 = Vertex
+            unified_path_buffer_.push_back(static_cast<float>(get(boost::vertex_index, mesh_)[arg]));
+            unified_path_buffer_.push_back(0.0f); // Padding
+            unified_path_buffer_.push_back(0.0f); // Padding
+            unified_path_buffer_.push_back(0.0f); // Padding
+        }
+        else if constexpr (std::is_same_v<T, std::pair<halfedge_descriptor, double>>)
+        {
+            unified_path_buffer_.push_back(1.0f); // Type: 1 = Edge
+            unified_path_buffer_.push_back(static_cast<float>(get(CGAL::halfedge_index, mesh_)[arg.first]));
+            unified_path_buffer_.push_back(static_cast<float>(arg.second)); // t parameter
+            unified_path_buffer_.push_back(0.0f);                           // Padding
+            unified_path_buffer_.push_back(0.0f);                           // Padding
+        }
+        else if constexpr (std::is_same_v<T, std::pair<face_descriptor, Traits::Barycentric_coordinates>>)
+        {
+            unified_path_buffer_.push_back(2.0f); // Type: 2 = Face
+            unified_path_buffer_.push_back(static_cast<float>(get(CGAL::face_index, mesh_)[arg.first]));
+            unified_path_buffer_.push_back(static_cast<float>(arg.second[0])); // b0
+            unified_path_buffer_.push_back(static_cast<float>(arg.second[1])); // b1
+            unified_path_buffer_.push_back(static_cast<float>(arg.second[2])); // b2
+        }
+    };
 
-        path_buffer_.push_back(
-            static_cast<float>(point.z()));
+    for (const auto &simplex : sequence_collector.sequence)
+    {
+        std::visit(unpack_visitor, simplex);
     }
 
-    return static_cast<int>(path_buffer_.size());
+    // std::cout << "--- All Mesh Faces and Vertices ---\n";
+    // for (auto f : CGAL::faces(mesh_))
+    // {
+    //     std::cout << "Face " << get(CGAL::face_index, mesh_)[f] << ": ";
+    //     for (auto he : CGAL::halfedges_around_face(
+    //              halfedge(f, mesh_), mesh_))
+    //     {
+    //         auto v = CGAL::target(he, mesh_);
+    //         std::cout << get(boost::vertex_index, mesh_)[v] << " ";
+    //     }
+    //     std::cout << "\n";
+    // }
+    // std::cout << "------------------------------------\n";
+
+    // std::cout << "--- Real 3D Coordinates of Face 0 Vertices ---\n";
+    // // auto face_range = CGAL::faces(mesh_);
+    // if (!face_range.empty())
+    // {
+    //     auto f0 = *face_range.begin(); // Get Face 0 handle
+    //     int local_idx = 0;
+    //     for (auto he : CGAL::halfedges_around_face(halfedge(f0, mesh_), mesh_))
+    //     {
+    //         auto v = CGAL::target(he, mesh_);
+    //         auto pt = mesh_.point(v); // Get the 3D Point
+
+    //         std::cout << "Local Position [" << local_idx << "] -> Internal Vertex ID "
+    //                   << get(boost::vertex_index, mesh_)[v]
+    //                   << " is at: (" << pt.x() << ", " << pt.y() << ", " << pt.z() << ")\n";
+    //         local_idx++;
+    //     }
+    // }
+    // std::cout << "----------------------------------------------\n";
+
+    return static_cast<int>(step_count); // Returns the total number of points
 }
 
 const float *GeodesicSolver::path_data() const
 {
-    return path_buffer_.empty()
-               ? nullptr
-               : path_buffer_.data();
+    return unified_path_buffer_.empty() ? nullptr : unified_path_buffer_.data();
 }
 
 int GeodesicSolver::path_size() const
 {
-    return static_cast<int>(path_buffer_.size());
-}
-
-int GeodesicSolver::face_count() const
-{
-    return static_cast<int>(mesh_.number_of_faces());
+    return static_cast<int>(unified_path_buffer_.size());
 }

@@ -10,9 +10,9 @@ services:
         BOOST_VERSION: "1.81.0"
     image: local/cgal-wasm:6.2.1
     container_name: cgal-wasm-compiler
-    working_dir: /src
+    working_dir: /workspace
     stdin_open: true
     tty: true
     volumes:
-      - ./:/src
+      - ./:/workspace
     command: ["sleep", "infinity"]

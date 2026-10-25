@@ -9,7 +9,9 @@
       "webRoot": "${workspaceFolder}",
       "sourceMaps": true,
       "preLaunchTask": "Start Python Server",
-      "skipFiles": ["<node_internals>/**", "**/npm/lil-gui*", "**/three*"] 
+      // "skipFiles": ["<node_internals>/**", "**/npm/lil-gui*", "**/three*"]
+      "skipFiles": ["<node_internals>/**", "**/npm/lil-gui*", "**/three*"],
+      "runtimeArgs": ["--disable-hang-monitor", "--js-flags=--expose-gc"]
     },
     {
       "name": "Debug Demo in Firefox",
