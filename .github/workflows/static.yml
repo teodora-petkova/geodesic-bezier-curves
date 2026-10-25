@@ -31,8 +31,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+      # - name: Setup Pages
+      #   uses: actions/configure-pages@v5
        
       # keep only index.html, src/, /models and cgal_wasm/compiled/
       - name: Clean up everything except required web assets
@@ -41,7 +41,7 @@ jobs:
           ls -la
           
           # Delete everything EXCEPT index.html, src, and cgal_wasm/compiled
-          find . -maxdepth 1 ! -name '.' ! -name 'index.html' !  -name 'src' !  -name 'models' ! -name 'cgal_wasm' ! -name '.github' -exec rm -rf {} +
+          find . -maxdepth 1 ! -name '.' ! -name 'index.html' !  -name 'src' !  -name 'models' ! -name 'cgal_wasm' ! -name 'geometry-central-js' ! -name '.github' -exec rm -rf {} +
           
           # Now go inside cgal_wasm and delete everything EXCEPT compiled
           if [ -d cgal_wasm ]; then
@@ -51,11 +51,11 @@ jobs:
           echo "=== After cleanup ==="
           ls -la
       
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # Upload entire repository
-          path: '.'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+      # - name: Upload artifact
+      #   uses: actions/upload-pages-artifact@v3
+      #   with:
+      #     # Upload entire repository
+      #     path: '.'
+      # - name: Deploy to GitHub Pages
+      #   id: deployment
+      #   uses: actions/deploy-pages@v5
