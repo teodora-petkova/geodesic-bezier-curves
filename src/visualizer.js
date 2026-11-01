@@ -2,7 +2,6 @@ export class Visualizer {
   constructor(scene, mesh, visualMesh, threeGeometry) {
     this.scene = scene;
     this.objects = []; // store all debug objects for easy cleanup
-    this.renderedObjects = [];
     this.stepObjects = []; // store temp objects
     this.anchorMarkers = [];
 
@@ -14,7 +13,12 @@ export class Visualizer {
 
     this.pathPointsGroup = new THREE.Group();
     this.scene.add(this.pathPointsGroup);
-    this.pathPointsGroup.visible = false; //true;//false;
+    this.pathPointsGroup.visible = false;
+
+    this.bezierHandleLinesGroup = new THREE.Group();
+    this.scene.add(this.bezierHandleLinesGroup);
+    this.bezierHandleLinesGroup.visible = false;
+
 
     // materials
     this.matGray = new THREE.LineBasicMaterial({ 
@@ -64,12 +68,9 @@ export class Visualizer {
     for (const obj of this.objects) {
       this.scene.remove(obj);
     }
-    for (const obj of this.renderedObjects) {
-      this.scene.remove(obj);
-    }
     this.objects = [];
-    this.renderedObjects = [];
     this.clearGroup(this.pathPointsGroup);
+    this.clearGroup(this.bezierHandleLinesGroup);
 
     if (this.pathLineMesh) {
       this.scene.remove(this.pathLineMesh);
@@ -78,6 +79,10 @@ export class Visualizer {
 
     this.anchorMarkers.forEach((m) => this.scene.remove(m));
     this.anchorMarkers = [];
+  }
+
+  showPathPoints(value) {
+    this.pathPointsGroup.visible = value;
   }
 
   drawSphere(pos, color = 0xe53e3e) {
@@ -98,7 +103,7 @@ export class Visualizer {
     return sphere;
   }
 
-  drawPath(pathPoints, color = 0xecc94b) {
+  drawPath(pathPoints, color = 0xbf9a49) {
     for (let p of pathPoints) {
       const point = this.drawSphere(p, 0x00ff00);
       this.pathPointsGroup.add(point);
@@ -121,15 +126,15 @@ export class Visualizer {
     const sphereGeo = new THREE.SphereGeometry(this.dynamicRadius, 16, 16);
     const mesh = new THREE.Mesh(sphereGeo, material);
     mesh.position.copy(v3);
-    this.scene.add(mesh);
-    this.renderedObjects.push(mesh);
+    this.add(mesh);
+    this.bezierHandleLinesGroup.add(mesh);
   }
 
   drawBezierPath(v3Array, material) {
     const geo = new THREE.BufferGeometry().setFromPoints(v3Array);
     const line = new THREE.Line(geo, material);
-    this.scene.add(line);
-    this.renderedObjects.push(line);
+    this.add(line);
+    this.bezierHandleLinesGroup.add(line);
   }
 
   // draw a specific frame without calculating anything new
@@ -155,4 +160,7 @@ export class Visualizer {
     this.drawBezierPoint(frame.points.C, this.matRed);
   }
 
+  showBezierHandleLines(value){
+    this.bezierHandleLinesGroup.visible = value;
+  }
 }

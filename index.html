@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
+  <link rel="stylesheet" href="css/style.css" />
   <title>Geodesic Bezier Curves</title>
   <style>
     body {
@@ -22,43 +23,87 @@
       line-height: 1.5;
     }
   </style>
-      <!-- Dependencies via CDN -->
+  <!-- Dependencies via CDN -->
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/OBJLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/utils/BufferGeometryUtils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.21"></script>
-    <script>
-        var GUI = lil.GUI;
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/earcut/dist/earcut.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/OBJLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/utils/BufferGeometryUtils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.21"></script>
+  <script>
+    var GUI = lil.GUI;
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/earcut/dist/earcut.min.js"></script>
 
-    <script src="geometry-central-js/linear-algebra/emscripten-memory-manager.js"></script>
-    <script>
-        let memoryManager = new EmscriptenMemoryManager();
-    </script>
-    <script src="geometry-central-js/linear-algebra/linear-algebra-asm.js"></script>
-    <script src="geometry-central-js/linear-algebra/vector.js"></script>
-    <script src="geometry-central-js/linear-algebra/dense-matrix.js"></script>
-    <script src="geometry-central-js/linear-algebra/sparse-matrix.js"></script>
-    <script src="geometry-central-js/core/vertex.js"></script>
-    <script src="geometry-central-js/core/edge.js"></script>
-    <script src="geometry-central-js/core/face.js"></script>
-    <script src="geometry-central-js/core/halfedge.js"></script>
-    <script src="geometry-central-js/core/corner.js"></script>
-    <script src="geometry-central-js/core/mesh.js"></script>
-    <script src="geometry-central-js/core/geometry.js"></script>
-    <script src="geometry-central-js/utils/meshio.js"></script>
-    <script src="geometry-central-js/utils/colormap.js"></script>
+  <script src="geometry-central-js/linear-algebra/emscripten-memory-manager.js"></script>
+  <script>
+    let memoryManager = new EmscriptenMemoryManager();
+  </script>
+  <script src="geometry-central-js/linear-algebra/linear-algebra-asm.js"></script>
+  <script src="geometry-central-js/linear-algebra/vector.js"></script>
+  <script src="geometry-central-js/linear-algebra/dense-matrix.js"></script>
+  <script src="geometry-central-js/linear-algebra/sparse-matrix.js"></script>
+  <script src="geometry-central-js/core/vertex.js"></script>
+  <script src="geometry-central-js/core/edge.js"></script>
+  <script src="geometry-central-js/core/face.js"></script>
+  <script src="geometry-central-js/core/halfedge.js"></script>
+  <script src="geometry-central-js/core/corner.js"></script>
+  <script src="geometry-central-js/core/mesh.js"></script>
+  <script src="geometry-central-js/core/geometry.js"></script>
+  <script src="geometry-central-js/utils/meshio.js"></script>
+  <script src="geometry-central-js/utils/colormap.js"></script>
 
 </head>
 
 <body>
-  <script type="module" src="src/init.js"">
-    
+  <script type="module" src="src/init.js">
   </script>
+
+  <div id="ui-panel">
+    <details id="controls-panel">
+      <summary style="cursor: pointer;font-weight: bold;">Signpost Triangulation</summary>
+
+      <div class="control-group">
+        <label for="meshSelect">Choose Preloaded Mesh</label>
+        <select id="meshSelect">
+           <option value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/cube.obj">Cube</option>
+           <option value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/cat_head.obj">Cat</option>
+           <option value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/torus.obj">Torus</option>
+           <option value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/spot.obj">Spot Cow</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="fileInput">Load Custom Mesh (.obj)</label>
+        <input type="file" id="fileInput" accept=".obj">
+      </div>
+
+      <div class="control-group">
+        <button class="btn" id="clearPathBtn">Clear Selected Path</button>
+      </div>
+
+      <div id="controls">
+        <strong>Views:</strong><br>
+        <div>
+          <input type="checkbox" id="togglePoints">
+          <label for="togglePoints">Show Bezier Curve Points</label>
+        </div>
+        <div>
+          <input type="checkbox" id="toggleBezierHandleLines">
+          <label for="togglePoints">Show Bezier Helper Handle Lines/Points for the Midpoint</label>
+        </div>
+      </div>
+
+      <div id="instructions">
+        <strong>Controls:</strong><br>
+        • <b>Rotate:</b> Left-Click + Drag<br>
+        • <b>Pan:</b> Right-Click + Drag / Ctrl+Drag<br>
+        • <b>Select Path Endpoints:</b> Shift + Left-Click on mesh surface.
+      </div>
+    </details>
+  </div>
+
 </body>
 
 </html>

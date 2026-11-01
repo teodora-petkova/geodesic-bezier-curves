@@ -24,6 +24,8 @@ export class SceneApp {
 
         let selectedPoints = [];
 
+        this.bezier_number_points = 10;
+
         this.initializeCGALWasmAndScene();
     }
 
@@ -102,7 +104,7 @@ export class SceneApp {
 
         // this.loadMeshFromText(boxObjText, "Default Box Cube");
 
-        this.loadMeshFromPath("./models/spot.obj");
+        this.loadMeshFromPath("./models/cube.obj");
 
 
         // ---- bind UI + events
@@ -365,19 +367,18 @@ export class SceneApp {
                 (p1, p2) => this.cgalAdapter.computeGeodesicPath(p1, p2, this.signpostMesh.mesh), this.visualizer);
 
             // 2. Run quadratic geodesic Bézier subdivision
-            let number_points = 9;
             const frame = bezier.sampleCubicGeodesicBezier(
-                this.signpostMesh, P0, P1, P2, P3, number_points);
+                this.signpostMesh, P0, P1, P2, P3, this.bezier_number_points);
             const samples = frame[0];
             // const samples = bezier.sampleQuadraticGeodesicBezier(
             //  this.signpostMesh, P0, P1, P2, 6)
-            
+
             const samplePoints = samples.map(
                 (p) => p.to3D(this.signpostMesh.geometry));
-            this.visualizer.drawPath(samplePoints, 0xff0033);//, color = 0x990044);
-            
+            this.visualizer.drawPath(samplePoints);//, 0xff0033);
+
             // midpoint frame
-            const middle_point_ind = Math.floor(number_points / 2);
+            const middle_point_ind = Math.floor(this.bezier_number_points / 2);
             this.visualizer.drawBezierFrame(frame[1][middle_point_ind]);
         }
     }
@@ -430,6 +431,44 @@ export class SceneApp {
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(window.innerWidth, window.innerHeight);
         });
+
+        document
+            .getElementById("fileInput")
+            .addEventListener("change", (e) => this.loadMeshFromFile(e));
+
+        document
+            .getElementById("meshSelect")
+            .addEventListener("change", async (e) => {
+                const url = e.target.value;
+                if (!url) return;
+
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error("Network response was not ok");
+
+                    const objText = await response.text();
+                    this.loadMeshFromText(objText);
+                } catch (error) {
+                    console.error("Error loading remote mesh:", error);
+                    alert("Failed to load mesh from GitHub.");
+                }
+            });
+
+        document
+            .getElementById("clearPathBtn")
+            .addEventListener("click", (e) => this.clearActivePath());
+
+        document
+            .getElementById("togglePoints")
+            .addEventListener("change", (e) =>
+                this.visualizer?.showPathPoints(e.target.checked)
+            );
+
+        document
+            .getElementById("toggleBezierHandleLines")
+            .addEventListener("change", (e) =>
+                this.visualizer?.showBezierHandleLines(e.target.checked)
+            );
     }
 
     // IMPORTANT: arrow function keeps `this` correct
