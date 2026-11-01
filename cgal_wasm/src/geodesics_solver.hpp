@@ -23,6 +23,8 @@ public:
         CGAL::Surface_mesh_shortest_path<Traits>;
 
     using Graph_traits = boost::graph_traits<Mesh>;
+    using Bary = Traits::Barycentric_coordinates;
+    using FT = Traits::FT;
     using vertex_descriptor = typename Graph_traits::vertex_descriptor;
     using face_descriptor = typename Graph_traits::face_descriptor;
     using halfedge_descriptor = typename Graph_traits::halfedge_descriptor;
@@ -61,6 +63,8 @@ private:
     // std::vector<int> face_buffer_;
     std::vector<float> unified_path_buffer_;
 
+    bool canonicalize_barycentric(Bary& b);
+    
     // Local sequence collector matching the documentation structure
     struct LocalSequenceCollector
     {

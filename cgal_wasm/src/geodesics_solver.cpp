@@ -26,6 +26,96 @@ namespace
                b1 >= -epsilon &&
                b2 >= -epsilon;
     }
+};
+
+bool GeodesicSolver::canonicalize_barycentric(Bary &b)
+{
+    const FT eps(1e-6);
+
+    for (int i = 0; i < 3; ++i)
+    {
+        // reject weights that are clearly outside the triangle
+        if (b[i] < -eps || b[i] > FT(1) + eps)
+            return false;
+
+        // treat tiny values as exactly zero
+        if (CGAL::abs(b[i]) <= eps)
+            b[i] = FT(0);
+    }
+
+    // count zero weights + remember where they are
+    int zeroCount = 0;
+    int zeroIndex = -1;
+    int nonzeroIndex = -1;
+
+    for (int i = 0; i < 3; ++i)
+    {
+        if (b[i] == FT(0))
+        {
+            ++zeroCount;
+            zeroIndex = i;
+        }
+        else
+        {
+            nonzeroIndex = i;
+        }
+    }
+
+    // all-zero weights do not describe a point
+    if (zeroCount == 3)
+        return false;
+
+    // two zero weights means the point is at a vertex
+    if (zeroCount == 2)
+    {
+        b = {{FT(0), FT(0), FT(0)}};
+        b[nonzeroIndex] = FT(1);
+        return true;
+    }
+
+    // one zero weight means the point is on an edge
+    if (zeroCount == 1)
+    {
+        const int i = (zeroIndex + 1) % 3;
+        const int j = (zeroIndex + 2) % 3;
+        const FT sum = b[i] + b[j];
+
+        if (sum == FT(0))
+            return false;
+
+        b[i] /= sum;
+        b[j] = FT(1) - b[i];
+        return true;
+    }
+
+    int zero = -1;
+    for (int i = 0; i < 3; ++i)
+    {
+        if (b[i] == FT(0))
+        {
+            if (zero != -1)
+            {
+                // Vertex: two weights are zero.
+                const int vertex = 3 - zero - i;
+                b = {{FT(0), FT(0), FT(0)}};
+                b[vertex] = FT(1);
+                return true;
+            }
+            zero = i;
+        }
+    }
+    
+    // no zero weights means the point is inside the triangle
+    const FT sum = b[0] + b[1] + b[2];
+
+    if (sum == FT(0))
+        return false;
+
+    b[0] /= sum;
+    b[1] /= sum;
+    b[2] = FT(1) - b[0] - b[1];
+
+    return true;
 }
 
 void GeodesicSolver::init(
@@ -130,15 +220,23 @@ int GeodesicSolver::compute_path(
     unified_path_buffer_.clear();
     solver_->clear();
 
-    Traits::Barycentric_coordinates start_bary = {{start_b0, start_b1, start_b2}};
-    Traits::Barycentric_coordinates end_bary = {{end_b0, end_b1, end_b2}};
+    Bary start_bary = {{FT(start_b0), FT(start_b1), FT(start_b2)}};
+    Bary end_bary = {{FT(end_b0), FT(end_b1), FT(end_b2)}};
+
+    if (!canonicalize_barycentric(start_bary) ||
+        !canonicalize_barycentric(end_bary))
+    {
+        std::cout << "Coordinates are not cannonical: " <<
+            "(" << start_b0 << ", " << start_b1 << ", " << start_b2 << "), " <<
+            "(" << end_b0 << ", " << end_b1 << ", " << end_b2 << ")" << std::endl;
+        return 0;
+    }
 
     // map the indices to the true CGAL face handles safely
     auto face_range = CGAL::faces(mesh_);
     auto start_face_it = std::next(face_range.begin(), start_face_idx);
     auto end_face_it = std::next(face_range.begin(), end_face_idx);
 
-    
     // solver_->add_source_point(Mesh::Face_index(start_face_idx), start_bary);
     // solver_->add_source_point(*start_face_it, start_bary);
     
@@ -171,7 +269,6 @@ int GeodesicSolver::compute_path(
     if (start_is_vertex) {
         solver_->add_source_point(start_v); // Directly adding vertex avoids CGAL bug!
     } else {
-        Traits::Barycentric_coordinates start_bary = {{ start_b0, start_b1, start_b2 }};
         solver_->add_source_point(*start_face_it, start_bary);
     }
     // =========================================================================

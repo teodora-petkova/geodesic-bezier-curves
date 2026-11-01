@@ -220,3 +220,42 @@ TEST_F(GeodesicSolverTest, FindsPathOnSquare_BetweenMidpointsOfTwoFaceEdges_Foun
 
     ASSERT_PATH(path, count, &expected_path[0][0], 3);
 }
+
+TEST_F(GeodesicSolverTest, FindsPathOnSquare_BetweenTwoPointsInsideFaceOnePointOnEdge_FoundPathNoExpception)
+{
+    // check for a successful fix for no  "CGAL ERROR: precondition violation! Expr: t0 + t1 == FT(1)
+    // fixed with canonicalize_barycentric function
+    // Example: When 0.2f and 0.8f are separately converted to CGAL’s FT, 
+     // their exact represented values may not add up to exactly FT(1). 
+    /*
+            3 ----------2
+            |        /  |
+            x----x /    |
+            |    /      |
+            |  /        |
+            0 ----------1
+
+            face 0 = (0, 1, 2)
+            face 1 = (0, 2, 3)
+    */
+    int count = solver.compute_path(
+        1, 0.2, 0.0, 0.8, // Source: on edge [v0, v3]
+        1, 0.3, 0.2, 0.5  // Target: inside the face
+    );
+    
+    ASSERT_GT(count, 0);
+    ASSERT_EQ(count, 2);
+
+    const float* path = solver.path_data();
+    ASSERT_NE(path, nullptr);
+
+    // std::cout << "face path:\n";
+    // print_path(path, count);
+
+    static const float expected_path[][5] = {
+        {2, 1, 0.3, 0.2, 0.5},  // face
+        {2, 1, 0.2, 0.0, 0.8},  // edge
+    };
+
+    ASSERT_PATH(path, count, &expected_path[0][0], 2);
+}

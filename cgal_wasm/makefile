@@ -1,4 +1,4 @@
-all: clean_build build clean_wasm wasm
+all: clean_build build clean_wasm wasm_release
 
 build:
 	# run CMake and provide the paths to /opt installations
