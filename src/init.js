@@ -4,6 +4,7 @@ import { SurfacePoint } from "./surface-point.js";
 import { SignpostMesh } from "./signpost-mesh.js";
 import { Visualizer } from "./visualizer.js";
 import { MeshInteractionManager } from "./mobile-interaction-manager.js";
+import { Bezier } from "./bezier.js";
 
 // import the factory function from emscripten-generated js file
 import wasmFactory from "../cgal_wasm/compiled/geodesics.js";
@@ -109,7 +110,7 @@ export class SceneApp {
 
         requestAnimationFrame(this.animate);
     }
-    
+
     convertHalfEdgeGeometryToThreeJsTopology(halfEdgeMesh, halfEdgeGeometry) {
         var { vertexPositions, vertexIndices, vertexColors } =
             this._extractVertexDataFromHalfEdgeMesh(halfEdgeMesh, halfEdgeGeometry);
@@ -335,23 +336,49 @@ export class SceneApp {
     }
 
     handleSurfacePointSelection(surfacePoint) {
-        if (this.selectedPoints.length >= 2) this.clearActivePath();
+        if (this.selectedPoints.length >= 4) this.clearActivePath();
 
         this.selectedPoints.push(surfacePoint);
 
         var pos = surfacePoint.to3D(this.signpostMesh.geometry);
         this.visualizer.drawSphere(pos);
 
-        if (this.selectedPoints.length === 2) {
-            const pathCoordinates = this.cgalAdapter.computeGeodesicPath(
-                this.selectedPoints[0].toBare(),
-                this.selectedPoints[1].toBare(),
-                this.signpostMesh.mesh
-            );
+        if (this.selectedPoints.length === 4) {
+            // const pathCoordinates = this.cgalAdapter.computeGeodesicPath(
+            //     this.selectedPoints[0],
+            //     this.selectedPoints[1],
+            //     this.signpostMesh.mesh
+            // );
 
-            const pathPoints = pathCoordinates.map((p) => p.to3D(this.signpostMesh.geometry));
+            // const pathPoints = pathCoordinates.map((p) => p.to3D(this.signpostMesh.geometry));
 
-            this.visualizer.drawPath(pathPoints);
+            // this.visualizer.drawPath(pathPoints, 0xff0033);
+
+            let [P0, P1, P2, P3] = [
+                this.selectedPoints[0],
+                this.selectedPoints[1],
+                this.selectedPoints[2],
+                this.selectedPoints[3],
+            ];
+
+            const bezier = new Bezier(
+                (p1, p2) => this.cgalAdapter.computeGeodesicPath(p1, p2, this.signpostMesh.mesh), this.visualizer);
+
+            // 2. Run quadratic geodesic Bézier subdivision
+            let number_points = 9;
+            const frame = bezier.sampleCubicGeodesicBezier(
+                this.signpostMesh, P0, P1, P2, P3, number_points);
+            const samples = frame[0];
+            // const samples = bezier.sampleQuadraticGeodesicBezier(
+            //  this.signpostMesh, P0, P1, P2, 6)
+            
+            const samplePoints = samples.map(
+                (p) => p.to3D(this.signpostMesh.geometry));
+            this.visualizer.drawPath(samplePoints, 0xff0033);//, color = 0x990044);
+            
+            // midpoint frame
+            const middle_point_ind = Math.floor(number_points / 2);
+            this.visualizer.drawBezierFrame(frame[1][middle_point_ind]);
         }
     }
 

@@ -2,6 +2,7 @@ export class Visualizer {
   constructor(scene, mesh, visualMesh, threeGeometry) {
     this.scene = scene;
     this.objects = []; // store all debug objects for easy cleanup
+    this.renderedObjects = [];
     this.stepObjects = []; // store temp objects
     this.anchorMarkers = [];
 
@@ -13,7 +14,24 @@ export class Visualizer {
 
     this.pathPointsGroup = new THREE.Group();
     this.scene.add(this.pathPointsGroup);
-    this.pathPointsGroup.visible = false;
+    this.pathPointsGroup.visible = false; //true;//false;
+
+    // materials
+    this.matGray = new THREE.LineBasicMaterial({ 
+      color: 0xaaaaaa,
+      linewidth: 2
+    });
+    this.matGreen = new THREE.LineBasicMaterial({
+      color: 0x0000ff,
+      linewidth: 2,
+    });
+    this.matMagenta = new THREE.LineBasicMaterial({
+      color: 0xff00ff,
+      linewidth: 2,
+    });
+    this.matBlue = new THREE.MeshBasicMaterial({ color: 0xaaaaaa });
+    this.matPointGreen = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    this.matRed = new THREE.MeshBasicMaterial({ color: 0xff00ff });
   }
 
   add(obj) {
@@ -46,7 +64,11 @@ export class Visualizer {
     for (const obj of this.objects) {
       this.scene.remove(obj);
     }
+    for (const obj of this.renderedObjects) {
+      this.scene.remove(obj);
+    }
     this.objects = [];
+    this.renderedObjects = [];
     this.clearGroup(this.pathPointsGroup);
 
     if (this.pathLineMesh) {
@@ -58,36 +80,27 @@ export class Visualizer {
     this.anchorMarkers = [];
   }
 
-  drawSphere(pos) {
+  drawSphere(pos, color = 0xe53e3e) {
     const sphereGeo = new THREE.SphereGeometry(this.dynamicRadius, 16, 16);
     const sphereMat = new THREE.MeshBasicMaterial({
-      color: 0xe53e3e,
+      color: color,
       depthTest: false, // Prevents the main mesh from blocking the point
       depthWrite: false,
     });
 
-    const marker = new THREE.Mesh(sphereGeo, sphereMat);
-    marker.renderOrder = 999; // forces Three.js to draw it on top
-    marker.position.set(pos.x, pos.y, pos.z);
-    this.add(marker);
-
-    this.anchorMarkers.push(marker);
-  }
-
-  drawPoint(P, color = 0xff0000, size = 0.01) {
-    const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(size),
-      new THREE.MeshBasicMaterial({ color })
-    );
-    sphere.position.set(P.x, P.y, P.z);
-    sphere.renderOrder = 999;
+    const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+    sphere.renderOrder = 999; // forces Three.js to draw it on top
+    sphere.position.set(pos.x, pos.y, pos.z);
     this.add(sphere);
+
+    this.anchorMarkers.push(sphere);
+
     return sphere;
   }
 
   drawPath(pathPoints, color = 0xecc94b) {
     for (let p of pathPoints) {
-      const point = this.drawPoint(p, 0x00ff00);
+      const point = this.drawSphere(p, 0x00ff00);
       this.pathPointsGroup.add(point);
     }
     const pathGeo = new THREE.BufferGeometry().setFromPoints(pathPoints);
@@ -103,4 +116,43 @@ export class Visualizer {
     this.pathLineMesh.renderOrder = 999;
     this.add(this.pathLineMesh);
   }
+
+  drawBezierPoint(v3, material) {
+    const sphereGeo = new THREE.SphereGeometry(this.dynamicRadius, 16, 16);
+    const mesh = new THREE.Mesh(sphereGeo, material);
+    mesh.position.copy(v3);
+    this.scene.add(mesh);
+    this.renderedObjects.push(mesh);
+  }
+
+  drawBezierPath(v3Array, material) {
+    const geo = new THREE.BufferGeometry().setFromPoints(v3Array);
+    const line = new THREE.Line(geo, material);
+    this.scene.add(line);
+    this.renderedObjects.push(line);
+  }
+
+  // draw a specific frame without calculating anything new
+  drawBezierFrame(frame) {
+    // 1. draw pre-calculated lines
+    frame.paths.controlLines.forEach((line) =>
+      this.drawBezierPath(line, this.matGray)
+    );
+    frame.paths.greenLines.forEach((line) =>
+      this.drawBezierPath(line, this.matGreen)
+    );
+    this.drawBezierPath(
+      frame.paths.magentaLine, this.matMagenta);
+
+    // 2. draw pre-calculated points
+    this.drawBezierPoint(frame.points.Q0, this.matBlue);
+    this.drawBezierPoint(frame.points.Q1, this.matBlue);
+    this.drawBezierPoint(frame.points.Q2, this.matBlue);
+
+    this.drawBezierPoint(frame.points.R0, this.matPointGreen);
+    this.drawBezierPoint(frame.points.R1, this.matPointGreen);
+
+    this.drawBezierPoint(frame.points.C, this.matRed);
+  }
+
 }

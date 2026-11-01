@@ -145,4 +145,42 @@ export class SignpostMesh {
     _clamp(value) {
         return Math.abs(value) < this.EPSILON ? 0 : value;
     }
+
+/**
+   * Resolves point spatial tracking vectors utilizing 2D Cramer determinant coordinate layouts.
+   * @param {number[]} vertexIndices - Array mapping precise 3D space tracking target key IDs.
+   * @param {module:LinearAlgebra.Vector} point - Vector target mapping raw query spatial coordinates.
+   * @returns {number[]} Precise 3-point planar barycentric location array coordinates.
+   */
+  getBaryForPointInFaceByVerticesIndices(vertexIndices, point) {
+    // console.log(point);
+    const rootPos = this.geometry.positions[vertexIndices[0]];
+    const edgeVectorU =
+      this.geometry.positions[vertexIndices[1]].minus(rootPos);
+    const edgeVectorV =
+      this.geometry.positions[vertexIndices[2]].minus(rootPos);
+    const targetVectorW = point.minus(rootPos);
+
+    // console.log(rootPos, edgeVectorU, edgeVectorV, targetVectorW);
+
+    const dotUU = edgeVectorU.dot(edgeVectorU);
+    const dotUV = edgeVectorU.dot(edgeVectorV);
+    const dotVV = edgeVectorV.dot(edgeVectorV);
+    const dotWU = targetVectorW.dot(edgeVectorU);
+    const dotWV = targetVectorW.dot(edgeVectorV);
+
+    const determinant = dotUU * dotVV - dotUV * dotUV;
+    // console.log(determinant);
+
+    // fallback safe escape block evaluating degenerate geometric faces
+    if (Math.abs(determinant) < 1e-14) {
+      return [1 / 3, 1 / 3, 1 / 3];
+    }
+
+    const weight1 = (dotVV * dotWU - dotUV * dotWV) / determinant;
+    const weight2 = (dotUU * dotWV - dotUV * dotWU) / determinant;
+    const weight0 = 1 - weight1 - weight2;
+
+    return [weight0, weight1, weight2];
+  }
 }

@@ -43,8 +43,8 @@ export class CGALAdapter {
       ]
     );
     this.cgalGetPathBufferAddress = m.cwrap(
-      "geodesic_get_path_ptr", 
-      "number", 
+      "geodesic_get_path_ptr",
+      "number",
       ["GeodesicSolver"]
     );
   }
@@ -52,7 +52,7 @@ export class CGALAdapter {
 
   uploadMesh(vertices, facesWithVertexIndices) {
     // allocate WebAssembly memory heaps via Emscripten
-    const vertexPositions = vertices.flatMap(v => [v.x, v.y, v.z]); 
+    const vertexPositions = vertices.flatMap(v => [v.x, v.y, v.z]);
     const posPtr = this.cgal_module._malloc(vertexPositions.length * 4); // Float32 = 4 bytes
     const facePtr = this.cgal_module._malloc(facesWithVertexIndices.length * 4); // Int32 = 4 bytes
 
@@ -82,26 +82,31 @@ export class CGALAdapter {
    */
   computeGeodesicPath(startPoint, endPoint, meshGeometry) {
 
+    // console.log('start:', startPoint.element.index,
+    //   startPoint.bary[0], startPoint.bary[1], startPoint.bary[2]);
+    // console.log('end:', endPoint.element.index,
+    //   endPoint.bary[0], endPoint.bary[1], endPoint.bary[2]);
+
     const pointCount = this.cgalComputeDirectPath(
       this.solver,
-      startPoint.elementIndex,
+      startPoint.element.index,
       startPoint.bary[0],
       startPoint.bary[1],
       startPoint.bary[2],
-      endPoint.elementIndex,
+      endPoint.element.index,
       endPoint.bary[0],
       endPoint.bary[1],
       endPoint.bary[2]
     );
 
     if (pointCount === 0) return [];
-    
+
     const memoryPathOffset = this.cgalGetPathBufferAddress(this.solver);
     const heapPathIndex = memoryPathOffset >> 2;
     const STRIDE = 5;
     const pathCoords = this.cgal_module.HEAPF32.slice(
       heapPathIndex, heapPathIndex + pointCount * STRIDE);
-  
+
     const surfacePoints = [];
 
     for (let i = 0; i < pointCount; i++) {
@@ -112,7 +117,7 @@ export class CGALAdapter {
 
       surfacePoints.push(surfacePoint);
     }
-    // console.log("Coords: ", pathCoordinates);
+    // console.log("Coords: ", surfacePoints);
 
     return surfacePoints;
   }
@@ -141,7 +146,7 @@ export class CGALAdapter {
       bary = [
         pathCoords[base + 2], // b0
         pathCoords[base + 3], // b1
-        pathCoords[base + 4] // b2
+        pathCoords[base + 4]  // b2
       ];
     }
     return new SurfacePoint(type, element, bary);
