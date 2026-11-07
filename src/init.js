@@ -208,6 +208,7 @@ export class SceneApp {
         if (this.visualWireframe) this.scene.remove(this.visualWireframe);
 
         this.clearActivePath();
+        this.resetTogglesToDefault(false);
 
         this.meshLoader = new MeshLoader(this.cgalAdapter);
         let buildSuccess;
@@ -380,6 +381,7 @@ export class SceneApp {
             // midpoint frame
             const middle_point_ind = Math.floor(this.bezier_number_points / 2);
             this.visualizer.drawBezierFrame(frame[1][middle_point_ind]);
+            this.visualizer.drawBezierSamplePoints(frame[1]);
         }
     }
 
@@ -459,9 +461,15 @@ export class SceneApp {
             .addEventListener("click", (e) => this.clearActivePath());
 
         document
-            .getElementById("togglePoints")
+            .getElementById("togglePathPoints")
             .addEventListener("change", (e) =>
                 this.visualizer?.showPathPoints(e.target.checked)
+            );
+
+        document
+            .getElementById("toggleBezierPoints")
+            .addEventListener("change", (e) =>
+                this.visualizer?.showBezierPoints(e.target.checked)
             );
 
         document
@@ -470,6 +478,26 @@ export class SceneApp {
                 this.visualizer?.showBezierHandleLines(e.target.checked)
             );
     }
+
+    resetTogglesToDefault(showAll = false) {
+        const toggles = {
+            "togglePathPoints": "showPathPoints",
+            "toggleBezierPoints": "showBezierPoints",
+            "toggleBezierHandleLines": "showBezierHandleLines"
+        };
+
+        Object.entries(toggles).forEach(([id, method]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.checked = showAll;
+            }
+            // Force the visualizer to sync up with the default state
+            if (this.visualizer && typeof this.visualizer[method] === "function") {
+                this.visualizer[method](showAll);
+            }
+        });
+    }
+    
 
     // IMPORTANT: arrow function keeps `this` correct
     animate = () => {

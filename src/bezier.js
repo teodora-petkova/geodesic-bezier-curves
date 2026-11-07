@@ -6,7 +6,7 @@ export class Bezier {
     this.traceBetweenPoints = traceBetweenPoints
   }
 
-  geodesicInterp(signpostMesh, A, B, u) {
+  geodesicInterp(signpostMesh, trace, u) {
     // given two SurfacePoints A, B on the mesh and parameter u in [0,1],
     // return the point at fraction u along the geodesic between them.
     // a geodesic path is made of straight pieces inside individual triangles
@@ -17,7 +17,6 @@ export class Bezier {
     //    - interpolate inside that segment’s triangle.
     u = Math.max(0, Math.min(1, u));
 
-    const trace = this.traceBetweenPoints(A, B);
     if (!trace?.length) return null;
     if (trace.length === 1 || u === 0) return trace[0];
     if (u === 1) return trace[trace.length - 1];
@@ -66,12 +65,15 @@ export class Bezier {
     numSamples -= 1;
     const samples = [];
 
+    const trace_P0_P1 = this.traceBetweenPoints(P0, P1);
+    const trace_P1_P2 = this.traceBetweenPoints(P1, P2);
+
     for (let k = 0; k <= numSamples; k++) {
       const u = k / numSamples;
 
       // First level: interpolate between P0-P1 and P1-P2
-      const Q0 = this.geodesicInterp(signpostMesh, P0, P1, u);
-      const Q1 = this.geodesicInterp(signpostMesh, P1, P2, u);
+      const Q0 = this.geodesicInterp(signpostMesh, trace_P0_P1, u);
+      const Q1 = this.geodesicInterp(signpostMesh, trace_P1_P2, u);
 
       // console.log('Q0: ', Q0.element.index, Q0.bary);
       // console.log('Q1: ', Q1.element.index, Q1.bary);
@@ -111,29 +113,28 @@ export class Bezier {
     var cache = [];
     const samples = [];
 
+    const path_P0_P1 = this.traceBetweenPoints(P0, P1);
+    const path_P1_P2 = this.traceBetweenPoints(P1, P2);
+    const path_P2_P3 = this.traceBetweenPoints(P2, P3);
+
     for (let k = 0; k <= numSamples; k++) {
       const u = k / numSamples;
 
-      // First level: interpolate between P0-P1 and P1-P2
-      const Q0 = this.geodesicInterp(signpostMesh, P0, P1, u);
-      const Q1 = this.geodesicInterp(signpostMesh, P1, P2, u);
-      const Q2 = this.geodesicInterp(signpostMesh, P2, P3, u);
+      const Q0 = this.geodesicInterp(signpostMesh, path_P0_P1, u);
+      const Q1 = this.geodesicInterp(signpostMesh, path_P1_P2, u);
+      const Q2 = this.geodesicInterp(signpostMesh, path_P2_P3, u);
 
-      const R0 = this.geodesicInterp(signpostMesh, Q0, Q1, u);
-      const R1 = this.geodesicInterp(signpostMesh, Q1, Q2, u);
+      const path_Q0_Q1 = this.traceBetweenPoints(Q0, Q1);
+      const path_Q1_Q2 = this.traceBetweenPoints(Q1, Q2);
 
-      // Second level: interpolate between Q0-Q1
-      const C = this.geodesicInterp(signpostMesh, R0, R1, u);
+      const R0 = this.geodesicInterp(signpostMesh, path_Q0_Q1, u);
+      const R1 = this.geodesicInterp(signpostMesh, path_Q1_Q2, u);
+
+      const path_R0_R1 = this.traceBetweenPoints(R0, R1);
+      
+      const C = this.geodesicInterp(signpostMesh, path_R0_R1, u);
 
       samples.push(C);
-
-      const pathP0_P1 = this.traceBetweenPoints(P0, P1);
-      const pathP1_P2 = this.traceBetweenPoints(P1, P2);
-      const pathP2_P3 = this.traceBetweenPoints(P2, P3);
-
-      const pathQ0_Q1 = this.traceBetweenPoints(Q0, Q1);
-      const pathQ1_Q2 = this.traceBetweenPoints(Q1, Q2);
-      const pathR0_R1 = this.traceBetweenPoints(R0, R1);
 
       cache.push({
         u: u,
@@ -146,15 +147,15 @@ export class Bezier {
         // Geodesic path line sequences
         paths: {
           controlLines: [
-            pathP0_P1.map(p => p.to3D(geom)),
-            pathP1_P2.map(p => p.to3D(geom)),
-            pathP2_P3.map(p => p.to3D(geom))
+            path_P0_P1.map(p => p.to3D(geom)),
+            path_P1_P2.map(p => p.to3D(geom)),
+            path_P2_P3.map(p => p.to3D(geom))
           ],
           greenLines: [
-            pathQ0_Q1.map(p => p.to3D(geom)),
-            pathQ1_Q2.map(p => p.to3D(geom))
+            path_Q0_Q1.map(p => p.to3D(geom)),
+            path_Q1_Q2.map(p => p.to3D(geom))
           ],
-          magentaLine: pathR0_R1.map(p => p.to3D(geom))
+          magentaLine: path_R0_R1.map(p => p.to3D(geom))
         }
       });
     }
@@ -164,9 +165,17 @@ export class Bezier {
       const c1 = samples[c];
       const c2 = samples[c + 1];
 
+      // if(c1.element.index == c2.element.index)
+      // {
+      //   geodesic_samples.push(c1);
+      //   geodesic_samples.push(c2);
+      // }
+      // else
+      // {
       var current_points = this.traceBetweenPoints(c1, c2);
       current_points.reverse();
       geodesic_samples.push(...current_points);
+      // }
     }
 
     return [geodesic_samples, cache]; // array of SurfacePoint on the geodesic Bézier curve

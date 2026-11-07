@@ -14,6 +14,10 @@ export class Visualizer {
     this.pathPointsGroup = new THREE.Group();
     this.scene.add(this.pathPointsGroup);
     this.pathPointsGroup.visible = false;
+    
+    this.bezierSamplePointGroup = new THREE.Group();
+    this.scene.add(this.bezierSamplePointGroup);
+    this.bezierSamplePointGroup.visible = false;
 
     this.bezierHandleLinesGroup = new THREE.Group();
     this.scene.add(this.bezierHandleLinesGroup);
@@ -71,6 +75,7 @@ export class Visualizer {
     this.objects = [];
     this.clearGroup(this.pathPointsGroup);
     this.clearGroup(this.bezierHandleLinesGroup);
+    this.clearGroup(this.bezierSamplePointGroup);
 
     if (this.pathLineMesh) {
       this.scene.remove(this.pathLineMesh);
@@ -79,10 +84,6 @@ export class Visualizer {
 
     this.anchorMarkers.forEach((m) => this.scene.remove(m));
     this.anchorMarkers = [];
-  }
-
-  showPathPoints(value) {
-    this.pathPointsGroup.visible = value;
   }
 
   drawSphere(pos, color = 0xe53e3e) {
@@ -122,12 +123,30 @@ export class Visualizer {
     this.add(this.pathLineMesh);
   }
 
-  drawBezierPoint(v3, material) {
+  drawPoint(pos, color)
+  {
     const sphereGeo = new THREE.SphereGeometry(this.dynamicRadius, 16, 16);
-    const mesh = new THREE.Mesh(sphereGeo, material);
-    mesh.position.copy(v3);
-    this.add(mesh);
-    this.bezierHandleLinesGroup.add(mesh);
+    const sphereMat = new THREE.MeshBasicMaterial({
+      color: color,
+      depthTest: false, // Prevents the main mesh from blocking the point
+      depthWrite: false,
+    });
+
+    const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+    sphere.renderOrder = 1001; // on the top of path points
+    sphere.position.set(pos.x, pos.y, pos.z);
+    this.add(sphere);
+    return sphere;
+  }
+
+  drawBezierHandlePoint(v3, material) {
+    const bezierPoint = this.drawPoint(v3, material.color);
+    this.bezierHandleLinesGroup.add(bezierPoint);
+  }
+
+  drawBezierSamplePoint(v3, material) {
+    const bezierPoint = this.drawPoint(v3, material.color);
+    this.bezierSamplePointGroup.add(bezierPoint);
   }
 
   drawBezierPath(v3Array, material) {
@@ -150,14 +169,30 @@ export class Visualizer {
       frame.paths.magentaLine, this.matMagenta);
 
     // 2. draw pre-calculated points
-    this.drawBezierPoint(frame.points.Q0, this.matBlue);
-    this.drawBezierPoint(frame.points.Q1, this.matBlue);
-    this.drawBezierPoint(frame.points.Q2, this.matBlue);
+    this.drawBezierHandlePoint(frame.points.Q0, this.matBlue);
+    this.drawBezierHandlePoint(frame.points.Q1, this.matBlue);
+    this.drawBezierHandlePoint(frame.points.Q2, this.matBlue);
 
-    this.drawBezierPoint(frame.points.R0, this.matPointGreen);
-    this.drawBezierPoint(frame.points.R1, this.matPointGreen);
+    this.drawBezierHandlePoint(frame.points.R0, this.matPointGreen);
+    this.drawBezierHandlePoint(frame.points.R1, this.matPointGreen);
 
-    this.drawBezierPoint(frame.points.C, this.matRed);
+    this.drawBezierSamplePoint(frame.points.C, this.matRed);
+  }
+
+  drawBezierSamplePoints(frames)
+  {
+    for(const frame of frames)
+    {
+      this.drawBezierSamplePoint(frame.points.C, this.matRed);
+    }
+  }
+
+  showPathPoints(value) {
+    this.pathPointsGroup.visible = value;    
+  }
+
+  showBezierPoints(value) {
+    this.bezierSamplePointGroup.visible = value;
   }
 
   showBezierHandleLines(value){
