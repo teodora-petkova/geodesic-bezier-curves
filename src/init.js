@@ -25,6 +25,7 @@ export class SceneApp {
         let selectedPoints = [];
 
         this.bezier_number_points = 10;
+        this.isComputingBezier = false;
 
         this.initializeCGALWasmAndScene();
     }
@@ -339,6 +340,7 @@ export class SceneApp {
     }
 
     handleSurfacePointSelection(surfacePoint) {
+        if (this.isComputingBezier) return;
         if (this.selectedPoints.length >= 4) this.clearActivePath();
 
         this.selectedPoints.push(surfacePoint);
@@ -347,25 +349,40 @@ export class SceneApp {
         this.visualizer.drawSphere(pos);
 
         if (this.selectedPoints.length === 4) {
-            // const pathCoordinates = this.cgalAdapter.computeGeodesicPath(
-            //     this.selectedPoints[0],
-            //     this.selectedPoints[1],
-            //     this.signpostMesh.mesh
-            // );
+            this.computeBezierForSelectedPoints();
+        }
+    }
 
-            // const pathPoints = pathCoordinates.map((p) => p.to3D(this.signpostMesh.geometry));
+    async computeBezierForSelectedPoints() {
+        if (this.isComputingBezier || this.selectedPoints.length < 4) return;
 
-            // this.visualizer.drawPath(pathPoints, 0xff0033);
+        // const pathCoordinates = this.cgalAdapter.computeGeodesicPath(
+        //     this.selectedPoints[0],
+        //     this.selectedPoints[1],
+        //     this.signpostMesh.mesh
+        // );
 
-            let [P0, P1, P2, P3] = [
-                this.selectedPoints[0],
-                this.selectedPoints[1],
-                this.selectedPoints[2],
-                this.selectedPoints[3],
-            ];
+        // const pathPoints = pathCoordinates.map((p) => p.to3D(this.signpostMesh.geometry));
 
+        // this.visualizer.drawPath(pathPoints, 0xff0033);
+
+        const [P0, P1, P2, P3] = this.selectedPoints;
+        this.setLoadingState(true);
+
+        // force a paint cycle before starting the expensive geodesic computation.
+        // if we run the heavy work immediately, the browser never repaints the overlay
+        // and the page appears frozen even though the loader was toggled.
+        await new Promise((resolve) => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(resolve);
+            });
+        });
+
+        try {
             const bezier = new Bezier(
-                (p1, p2) => this.cgalAdapter.computeGeodesicPath(p1, p2, this.signpostMesh.mesh), this.visualizer);
+                (p1, p2) => this.cgalAdapter.computeGeodesicPath(p1, p2, this.signpostMesh.mesh),
+                this.visualizer
+            );
 
             // 2. Run quadratic geodesic Bézier subdivision
             const frame = bezier.sampleCubicGeodesicBezier(
@@ -378,12 +395,16 @@ export class SceneApp {
                 (p) => p.to3D(this.signpostMesh.geometry));
             this.visualizer.drawPath(samplePoints);//, 0xff0033);
 
-            // midpoint frame
             const middle_point_ind = Math.floor(this.bezier_number_points / 2);
             this.visualizer.drawBezierFrame(frame[1][middle_point_ind]);
             this.visualizer.drawBezierSamplePoints(frame[1]);
+        } catch (error) {
+            console.error("Bezier computation failed:", error);
+        } finally {
+            this.setLoadingState(false);
         }
     }
+
 
     /**
      * Computes exact barycentric coordinates from a Three.js this.raycaster intersection instance.
@@ -497,7 +518,20 @@ export class SceneApp {
             }
         });
     }
-    
+
+    setLoadingState(isLoading) {
+        this.isComputingBezier = isLoading;
+
+        const overlay = document.getElementById("loading-overlay");
+        if (overlay) {
+            overlay.classList.toggle("visible", isLoading);
+            overlay.setAttribute("aria-hidden", String(!isLoading));
+        }
+
+        if (this.interactionManager) {
+            this.interactionManager.setInteractionEnabled(!isLoading);
+        }
+    }
 
     // IMPORTANT: arrow function keeps `this` correct
     animate = () => {

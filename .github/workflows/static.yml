@@ -40,10 +40,10 @@ jobs:
           echo "=== Before cleanup ==="
           ls -la
           
-          # Delete everything EXCEPT index.html, css, src, and cgal_wasm/compiled
-          find . -maxdepth 1 ! -name '.' ! -name 'index.html' !  -name 'css' !  -name 'src' !  -name 'models' ! -name 'cgal_wasm' ! -name 'geometry-central-js' ! -name '.github' -exec rm -rf {} +
+          # delete everything EXCEPT index.html, css, assets, src, and cgal_wasm/compiled, obj models, libraries
+          find . -maxdepth 1 ! -name '.' ! -name 'index.html' !  -name 'css' !  -name 'assets' !  -name 'src' !  -name 'models' ! -name 'cgal_wasm' ! -name 'geometry-central-js' ! -name '.github' -exec rm -rf {} +
           
-          # Now go inside cgal_wasm and delete everything EXCEPT compiled
+          # go inside cgal_wasm and delete everything EXCEPT compiled
           if [ -d cgal_wasm ]; then
             find cgal_wasm -maxdepth 1 ! -name 'cgal_wasm' ! -name 'compiled' -exec rm -rf {} +
           fi

@@ -12,8 +12,17 @@ export class MeshInteractionManager {
 
         this.touchTimer = null;
         this.isTouchMoving = false;
+        this.isInteractionEnabled = true;
 
         this.init();
+    }
+
+    setInteractionEnabled(enabled) {
+        this.isInteractionEnabled = enabled;
+        if (!enabled && this.touchTimer) {
+            clearTimeout(this.touchTimer);
+            this.touchTimer = null;
+        }
     }
 
     init() {
@@ -22,8 +31,8 @@ export class MeshInteractionManager {
 
         // mobile listeners
         window.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: true });
-        window.addEventListener('touchmove', () => this.handleTouchMove(), { passive: true });
-        window.addEventListener('touchend', () => this.handleTouchEnd(), { passive: true });
+        window.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: true });
+        window.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: true });
     }
 
     /**
@@ -40,6 +49,8 @@ export class MeshInteractionManager {
      * Casts a ray through the scene and fires the custom callback if a mesh is hit
      */
     checkIntersection() {
+        if (!this.isInteractionEnabled) return;
+
         this.raycaster.setFromCamera(this.pointer, this.camera);
         const intersects = this.raycaster.intersectObjects(this.scene.children, true);
 
@@ -59,6 +70,7 @@ export class MeshInteractionManager {
      * Desktop logic - handles Shift + Click point selection
      */
     handleDesktopClick(event) {
+        if (!this.isInteractionEnabled) return;
         if (!event.shiftKey) return; // Ignore standard rotation clicks
 
         this.updatePointer(event.clientX, event.clientY);
@@ -69,6 +81,7 @@ export class MeshInteractionManager {
      * Mobile logic - touch + hold for 300ms
      */
     handleTouchStart(event) {
+        if (!this.isInteractionEnabled) return;
         // only process deliberate single-finger clicks
         if (event.touches.length !== 1) return;
 
@@ -110,8 +123,8 @@ export class MeshInteractionManager {
      * If they drag their finger across the screen to pan the camera, the distance 
      * easily clears 8 pixels, the timer kills cleanly, and the camera moves normally.
      */
-    handleTouchMove() {
-        if (event.touches.length !== 1) return;
+    handleTouchMove(event) {
+        if (!this.isInteractionEnabled || !event || event.touches.length !== 1) return;
         const touch = event.touches[0];
 
         // calculate how many pixels the finger actually drifted
@@ -127,12 +140,13 @@ export class MeshInteractionManager {
         }
     }
 
-    handleTouchEnd() {
+    handleTouchEnd(event) {
+        if (!this.isInteractionEnabled) return;
         // lifting finger early cancels selection.
         if (this.touchTimer) clearTimeout(this.touchTimer);
 
         // prevent Android from triggering text selections / context menus
-        if (event.cancelable) {
+        if (event && event.cancelable) {
             event.preventDefault();
         }
     }

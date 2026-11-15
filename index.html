@@ -67,10 +67,18 @@
       <div class="control-group">
         <label for="meshSelect">Choose Preloaded Mesh</label>
         <select id="meshSelect">
-           <option value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/cube.obj">Cube</option>
-           <option value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/cat_head.obj">Cat</option>
-           <option value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/torus.obj">Torus</option>
-           <option value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/spot.obj">Spot Cow</option>
+          <option
+            value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/cube.obj">
+            Cube</option>
+          <option
+            value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/cat_head.obj">
+            Cat</option>
+          <option
+            value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/torus.obj">
+            Torus</option>
+          <option
+            value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/spot.obj">
+            Spot Cow</option>
         </select>
       </div>
 
@@ -106,6 +114,13 @@
         • <b>Select Path Endpoints:</b> Shift + Left-Click on mesh surface.
       </div>
     </details>
+  </div>
+
+  <div id="loading-overlay" class="hidden" aria-live="polite" aria-hidden="true">
+    <div class="loading-content">
+      <img src="assets/loading.gif" alt="Loading" />
+      <div>Computing geodesic Bézier curve...</div>
+    </div>
   </div>
 
 </body>

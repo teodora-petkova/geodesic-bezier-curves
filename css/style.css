@@ -81,6 +81,49 @@ input[type="file"] {
     margin-top: 15px;
 }
 
+#loading-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(2, 6, 23, 0.72);
+    backdrop-filter: blur(6px);
+    z-index: 2000;
+    pointer-events: all;
+    opacity: 0;
+    transition: opacity 0.15s ease-in-out;
+}
+
+#loading-overlay.visible {
+    display: flex;
+    opacity: 0.8;
+}
+
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 22px 28px;
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(96, 165, 250, 0.5);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+    color: #e2e8f0;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    min-width: 220px;
+}
+
+.loading-content img {
+    display: block;
+    width: 80px;
+    height: 80px;
+    filter: drop-shadow(0 0 12px rgba(96, 165, 250, 0.5));
+}
+
 .legend-item {
     display: flex;
     align-items: center;
