@@ -1,166 +1,318 @@
+:root {
+  color-scheme: dark;
+  --panel-bg: rgba(22, 22, 26, 0.92);
+  --surface: #20232b;
+  --border: #394150;
+  --text: #e2e8f0;
+  --muted: #a0aec0;
+  --accent: #60a5fa;
+}
+
 body {
-    margin: 0;
-    overflow: hidden;
-    background-color: #121214;
-    color: #e2e8f0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  overflow: hidden;
+  background: #121214;
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 #ui-panel {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    padding: 20px;
-    background: rgba(22, 22, 26, 0.85);
-    backdrop-filter: blur(8px);
-    border-radius: 12px;
-    border: 1px solid #2d3748;
-    width: 280px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-    pointer-events: auto;
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 100;
+  box-sizing: border-box;
+  width: min(340px, calc(100vw - 30px));
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  box-shadow: 0 10px 25px rgb(0 0 0 / 45%);
+  backdrop-filter: blur(10px);
 }
 
-h3 {
-    margin-top: 0;
-    font-size: 16px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #a0aec0;
+/* #ui-panel .control-group > label,
+#ui-panel .mode-picker > label {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+} */
+
+/* Matching chevrons for the collapsible panel and dropdowns */
+#controls-panel > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  list-style: none;
 }
 
-.control-group {
-    margin-bottom: 15px;
+#controls-panel > summary::-webkit-details-marker {
+  display: none;
 }
 
-label {
-    display: block;
-    font-size: 12px;
-    color: #a0aec0;
-    margin-bottom: 5px;
+#controls-panel > summary::after,
+.select-wrap::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
 }
 
-input[type="file"] {
-    width: 100%;
-    padding: 8px 1px;
-    border-radius: 6px;
-    font-size: 12px;
-    background: #2d3748;
-    border: 1px dashed #4a5568;
-    color: #edf2f7;
-    cursor: pointer;
+#controls-panel > summary::after {
+  margin: -4px 3px 0 12px;
+}
+
+#controls-panel[open] > summary::after {
+  transform: rotate(225deg);
+}
+
+.select-wrap {
+  position: relative;
+}
+
+.select-wrap select {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 38px 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.select-wrap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+.control-group,
+.mode-picker {
+  margin-top: 16px;
+}
+
+.control-group > label,
+.mode-picker > label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Shared styling for both dropdowns */
+.control-group select,
+.mode-picker select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 38px 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.control-group select:hover,
+.mode-picker select:hover {
+  border-color: #64748b;
+}
+
+.control-group select:focus-visible,
+.mode-picker select:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgb(96 165 250 / 35%);
+  outline-offset: 2px;
+}
+
+.control-group input[type="file"] {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px;
+  border: 1px dashed #4a5568;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
 }
 
 .btn {
-    width: 100%;
-    padding: 8px;
-    border-radius: 6px;
-    font-size: 12px;
-    background: #3182ce;
-    color: white;
-    border: none;
-    cursor: pointer;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #3182ce;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .btn:hover {
-    background: #2b6cb0;
+  background: #2b6cb0;
 }
 
-#status {
-    font-size: 12px;
-    color: #48bb78;
-    margin-top: 10px;
-    font-family: monospace;
+#bezierControls,
+#instructions {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+#bezierControls > strong,
+#instructions > strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+#bezierControls > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 8px 0;
+}
+
+#bezierControls input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+}
+
+#bezierControls label {
+  display: inline;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
 }
 
 #instructions {
-    font-size: 12px;
-    color: #cbd5e0;
-    line-height: 1.5;
-    border-top: 1px solid #2d3748;
-    pt: 10px;
-    margin-top: 15px;
+  color: #cbd5e0;
+}
+
+#status {
+  margin-top: 10px;
+  color: #48bb78;
+  font-family: monospace;
+  font-size: 12px;
 }
 
 #loading-overlay {
-    position: fixed;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(2, 6, 23, 0.72);
-    backdrop-filter: blur(6px);
-    z-index: 2000;
-    pointer-events: all;
-    opacity: 0;
-    transition: opacity 0.15s ease-in-out;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgb(2 6 23 / 72%);
+  backdrop-filter: blur(6px);
 }
 
 #loading-overlay.visible {
-    display: flex;
-    opacity: 0.8;
+  display: flex;
 }
 
 .loading-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding: 22px 28px;
-    border-radius: 18px;
-    background: rgba(15, 23, 42, 0.92);
-    border: 1px solid rgba(96, 165, 250, 0.5);
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
-    color: #e2e8f0;
-    font-size: 15px;
-    font-weight: 700;
-    text-align: center;
-    min-width: 220px;
+  display: flex;
+  min-width: 220px;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 28px;
+  border: 1px solid rgb(96 165 250 / 50%);
+  border-radius: 18px;
+  background: rgb(15 23 42 / 95%);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
 }
 
 .loading-content img {
-    display: block;
-    width: 80px;
-    height: 80px;
-    filter: drop-shadow(0 0 12px rgba(96, 165, 250, 0.5));
+  display: block;
+  width: 80px;
+  height: 80px;
+  filter: drop-shadow(0 0 12px rgb(96 165 250 / 50%));
 }
 
-.legend-item {
-    display: flex;
-    align-items: center;
-    font-size: 11px;
-    margin-top: 5px;
-}
-
-.legend-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    margin-right: 8px;
-}
-
-#controls {
+@media (max-width: 480px) {
+  #ui-panel {
     top: 10px;
-    /* left: 10px; */
-    color: red;
-    padding: 15px;
-    border-radius: 8px;
-    z-index: 100;
-    font-size: 12px;
-    color: #cbd5e0;
-    line-height: 1.5;
-    border-top: 1px solid #2d3748;
-    pt: 10px;
-    margin-top: 15px;
+    left: 10px;
+    width: calc(100vw - 20px);
+    padding: 13px;
+  }
 }
 
-/* Target every inner div container directly */
-#controls>div {
-    display: flex;
-    /* Forces checkbox and text into a row alignment */
-    align-items: center;
-    /* Centers the checkbox vertically with the text */
-    gap: 8px;
-    /* Adds a clean space between the box and the text */
-    margin-bottom: 8px;
-    /* Adds vertical space between each separate line */
+#bezierControls[hidden] {
+  display: none;
+}
+
+.mode-hint {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 3%);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.mode-hint__text {
+  margin: 0 0 10px;
+  color: var(--text);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 9px;
+}
+
+.checkbox-row input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+}
+
+.checkbox-row label {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.shared-control {
+  margin-top: 12px;
 }

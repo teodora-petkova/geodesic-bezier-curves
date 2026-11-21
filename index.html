@@ -65,21 +65,23 @@
       <summary style="cursor: pointer;font-weight: bold;">Geodesic Bezier Curves</summary>
 
       <div class="control-group">
-        <label for="meshSelect">Choose Preloaded Mesh</label>
-        <select id="meshSelect">
-          <option
-            value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/cube.obj">
-            Cube</option>
-          <option
-            value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/cat_head.obj">
-            Cat</option>
-          <option
-            value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/torus.obj">
-            Torus</option>
-          <option
-            value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/spot.obj">
-            Spot Cow</option>
-        </select>
+          <label for="meshSelect">Choose Preloaded Mesh</label>
+          <div class="select-wrap">
+          <select id="meshSelect">
+            <option
+              value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/cube.obj">
+              Cube</option>
+            <option
+              value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/cat_head.obj">
+              Cat</option>
+            <option
+              value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/torus.obj">
+              Torus</option>
+            <option
+              value="https://raw.githubusercontent.com/teodora-petkova/geodesic-bezier-curves/refs/heads/main/models/spot.obj">
+              Spot Cow</option>
+          </select>
+        </div>
       </div>
 
       <div class="control-group">
@@ -91,27 +93,46 @@
         <button class="btn" id="clearPathBtn">Clear Selected Path</button>
       </div>
 
-      <div id="controls">
-        <strong>Views:</strong><br>
-        <div>
-          <input type="checkbox" id="togglePathPoints">
-          <label>Show Curve Path Points</label>
-        </div>
-        <div>
-          <input type="checkbox" id="toggleBezierPoints">
-          <label>Show Bezier Sample Points</label>
-        </div>
-        <div>
-          <input type="checkbox" id="toggleBezierHandleLines">
-          <label>Show Bezier Helper Handle Lines/Points for the Midpoint</label>
+      <div class="mode-picker">
+        <label for="algorithm">Algorithm</label>
+        <div class="select-wrap">
+          <select id="algorithm">
+            <option value="bezier_curve" selected>Find Cubic Geodesic Bezier Curve</option>
+            <option value="geodesic_path">Find Geodesic Path</option>
+          </select>
         </div>
       </div>
 
+      <div id="geodesicControls" class="mode-hint">
+        Select 2 points to find the geodesic path between them.
+      </div>
+
+      <div id="bezierControls" class="mode-hint">
+        <p class="mode-hint__text">Select 4 control points for the Bezier curve.</p>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="toggleBezierPoints">
+          <label for="toggleBezierPoints">Show Bezier Sample Points</label>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="toggleBezierHandleLines">
+          <label for="toggleBezierHandleLines">
+            Show Bezier Helper Handle Lines/Points for the Midpoint
+          </label>
+        </div>
+      </div>
+
+      <div class="checkbox-row shared-control">
+        <input type="checkbox" id="togglePathPoints">
+        <label for="togglePathPoints">Show Path Points</label>
+      </div>
+
       <div id="instructions">
-        <strong>Controls:</strong><br>
+        <strong>Controls:</strong>
+        • <b>Select Path Endpoints:</b> Shift + Left-Click on mesh surface.<br>
         • <b>Rotate:</b> Left-Click + Drag<br>
         • <b>Pan:</b> Right-Click + Drag / Ctrl+Drag<br>
-        • <b>Select Path Endpoints:</b> Shift + Left-Click on mesh surface.
       </div>
     </details>
   </div>
@@ -119,7 +140,7 @@
   <div id="loading-overlay" class="hidden" aria-live="polite" aria-hidden="true">
     <div class="loading-content">
       <img src="assets/loading.gif" alt="Loading" />
-      <div>Computing geodesic Bézier curve...</div>
+      <div>Computing ...</div>
     </div>
   </div>
 

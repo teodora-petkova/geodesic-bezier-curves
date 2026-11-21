@@ -25,7 +25,7 @@ export class SceneApp {
         let selectedPoints = [];
 
         this.bezier_number_points = 10;
-        this.isComputingBezier = false;
+        this.isComputing = false;
 
         this.initializeCGALWasmAndScene();
     }
@@ -340,31 +340,46 @@ export class SceneApp {
     }
 
     handleSurfacePointSelection(surfacePoint) {
-        if (this.isComputingBezier) return;
-        if (this.selectedPoints.length >= 4) this.clearActivePath();
+        const isBezier = this.isBezierMode();
+        var pointToSelect = 4;
+        if (!isBezier) {
+            pointToSelect = 2;
+        }
+
+        if (this.isComputing) return;
+        if (this.selectedPoints.length >= pointToSelect) this.clearActivePath();
 
         this.selectedPoints.push(surfacePoint);
 
         var pos = surfacePoint.to3D(this.signpostMesh.geometry);
         this.visualizer.drawSphere(pos);
 
-        if (this.selectedPoints.length === 4) {
-            this.computeBezierForSelectedPoints();
+        if (this.selectedPoints.length === pointToSelect) {
+            if(isBezier)
+                this.computeBezierForSelectedPoints();
+            else
+                this.computeGeodesicPath();
         }
     }
 
+    async computeGeodesicPath(){
+        if (this.isComputing || this.selectedPoints.length < 2) return;
+        const pathCoordinates = this.cgalAdapter.computeGeodesicPath(
+            this.selectedPoints[0],
+            this.selectedPoints[1],
+            this.signpostMesh.mesh
+        );
+
+        const pathPoints = pathCoordinates.map((p) => p.to3D(this.signpostMesh.geometry));
+
+        this.visualizer.drawPath(pathPoints);
+
+    }
+
     async computeBezierForSelectedPoints() {
-        if (this.isComputingBezier || this.selectedPoints.length < 4) return;
+        if (this.isComputing || this.selectedPoints.length < 4) return;
 
-        // const pathCoordinates = this.cgalAdapter.computeGeodesicPath(
-        //     this.selectedPoints[0],
-        //     this.selectedPoints[1],
-        //     this.signpostMesh.mesh
-        // );
 
-        // const pathPoints = pathCoordinates.map((p) => p.to3D(this.signpostMesh.geometry));
-
-        // this.visualizer.drawPath(pathPoints, 0xff0033);
 
         const [P0, P1, P2, P3] = this.selectedPoints;
         this.setLoadingState(true);
@@ -498,6 +513,48 @@ export class SceneApp {
             .addEventListener("change", (e) =>
                 this.visualizer?.showBezierHandleLines(e.target.checked)
             );
+
+
+        this.algorithmSelect = document.querySelector("#algorithm");
+        this.geodesicControls = document.querySelector("#geodesicControls");
+        this.bezierControls = document.querySelector("#bezierControls");
+
+        this.algorithmSelect.addEventListener("change",
+            this.updateAlgorithmMode.bind(this));
+
+        this.updateAlgorithmMode();
+    }
+
+    updateAlgorithmMode() {
+        this.clearActivePath();
+
+        const isBezier = this.isBezierMode();
+
+        this.geodesicControls.hidden = isBezier;
+
+        // turn off the view checkboxes when leaving Bezier mode.
+        if (!isBezier) {
+            this.geodesicControls
+                .querySelectorAll('input[type="checkbox"]')
+                .forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+        }
+
+        this.bezierControls.hidden = !isBezier;
+
+        // turn off the view checkboxes when leaving Bezier mode.
+        if (!isBezier) {
+            this.bezierControls
+                .querySelectorAll('input[type="checkbox"]')
+                .forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+        }
+    }
+
+    isBezierMode() {
+        return this.algorithmSelect.value === "bezier_curve";
     }
 
     resetTogglesToDefault(showAll = false) {
@@ -520,7 +577,7 @@ export class SceneApp {
     }
 
     setLoadingState(isLoading) {
-        this.isComputingBezier = isLoading;
+        this.isComputing = isLoading;
 
         const overlay = document.getElementById("loading-overlay");
         if (overlay) {
