@@ -2,8 +2,9 @@ import { SurfacePoint } from "./surface-point.js";
 
 export class Bezier {
 
-  constructor(traceBetweenPoints) {
+  constructor(traceBetweenPoints, adapter, debug) {
     this.traceBetweenPoints = traceBetweenPoints
+    this.adapter = adapter;
   }
 
   geodesicInterp(signpostMesh, trace, u) {
@@ -108,17 +109,27 @@ export class Bezier {
   }
 
   sampleCubicGeodesicBezier(signpostMesh, P0, P1, P2, P3, numSamples) {
-    numSamples -= 1;
+    this.adapter.resetStats(); // Pass or reference your CGALAdapter instance
+    const totalStart = performance.now();
+    var steps = numSamples - 1;
+    if (steps < 1) return [P0];
+
     let geom = signpostMesh.geometry;
     var cache = [];
     const samples = [];
 
+    // level 1 traces computed once = 3 wasm calls
     const path_P0_P1 = this.traceBetweenPoints(P0, P1);
     const path_P1_P2 = this.traceBetweenPoints(P1, P2);
     const path_P2_P3 = this.traceBetweenPoints(P2, P3);
 
-    for (let k = 0; k <= numSamples; k++) {
-      const u = k / numSamples;
+    // endpoint k = 0 (u = 0) is strictly P0 — 0 Wasm calls!
+    samples[0] = P3;
+
+    // level 2 traces: interior samples k = 1 .. steps - 1 
+    // (3 Wasm calls per interior sample = 24 calls for 10 samples)
+    for (let k = 1; k < steps; k++) {
+      const u = k / steps;
 
       const Q0 = this.geodesicInterp(signpostMesh, path_P0_P1, u);
       const Q1 = this.geodesicInterp(signpostMesh, path_P1_P2, u);
@@ -160,6 +171,8 @@ export class Bezier {
       });
     }
 
+    samples[steps] = P0;
+
     var geodesic_samples = [];
     for (let c = 0; c < samples.length - 1; c++) {
       const c1 = samples[c];
@@ -177,6 +190,19 @@ export class Bezier {
       geodesic_samples.push(...current_points);
       // }
     }
+
+    const totalMs = performance.now() - totalStart;
+    const { wasmCalls, pureWasmMs, jsMarshalMs } = this.adapter.stats;
+    const jsBezierMathMs = totalMs - pureWasmMs - jsMarshalMs;
+
+    console.table({
+      "1. Pure C++ CGAL Wasm (ms)": pureWasmMs.toFixed(2),
+      "2. JS Heap Slice + SurfacePoint (ms)": jsMarshalMs.toFixed(2),
+      "3. JS geodesicInterp + Cache/to3D (ms)": jsBezierMathMs.toFixed(2),
+      "Total Bezier Frame (ms)": totalMs.toFixed(2),
+      "Wasm Call Count": wasmCalls,
+      "Avg per Wasm Call (ms)": (pureWasmMs / wasmCalls).toFixed(2),
+    });
 
     return [geodesic_samples, cache]; // array of SurfacePoint on the geodesic Bézier curve
   }

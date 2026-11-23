@@ -47,8 +47,19 @@ export class CGALAdapter {
       "number",
       ["GeodesicSolver"]
     );
+
+    this.stats = {
+      wasmCalls: 0,
+      pureWasmMs: 0,      // Time spent strictly inside C++ CGAL
+      jsMarshalMs: 0,     // Time spent reading HEAPF32 & creating SurfacePoints
+    };
   }
 
+  resetStats() {
+    this.stats.wasmCalls = 0;
+    this.stats.pureWasmMs = 0;
+    this.stats.jsMarshalMs = 0;
+  }
 
   uploadMesh(vertices, facesWithVertexIndices) {
     // allocate WebAssembly memory heaps via Emscripten
@@ -87,6 +98,7 @@ export class CGALAdapter {
     // console.log('end:', endPoint.element.index,
     //   endPoint.bary[0], endPoint.bary[1], endPoint.bary[2]);
 
+    const t0 = performance.now();
     const pointCount = this.cgalComputeDirectPath(
       this.solver,
       startPoint.element.index,
@@ -100,6 +112,11 @@ export class CGALAdapter {
     );
 
     if (pointCount === 0) return [];
+    const t1 = performance.now();
+
+    this.stats.wasmCalls++;
+    this.stats.pureWasmMs += (t1 - t0);
+
 
     const memoryPathOffset = this.cgalGetPathBufferAddress(this.solver);
     const heapPathIndex = memoryPathOffset >> 2;
@@ -119,6 +136,9 @@ export class CGALAdapter {
     }
     // console.log("Coords: ", surfacePoints);
 
+    const t2 = performance.now();
+
+    this.stats.jsMarshalMs += (t2 - t1);
     return surfacePoints;
   }
 

@@ -396,7 +396,7 @@ export class SceneApp {
         try {
             const bezier = new Bezier(
                 (p1, p2) => this.cgalAdapter.computeGeodesicPath(p1, p2, this.signpostMesh.mesh),
-                this.visualizer
+                this.cgalAdapter
             );
 
             // 2. Run quadratic geodesic Bézier subdivision

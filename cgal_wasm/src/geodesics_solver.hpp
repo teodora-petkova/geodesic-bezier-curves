@@ -12,25 +12,27 @@
 #include <CGAL/Polygon_mesh_processing/repair_polygon_soup.h>
 #include <CGAL/Polygon_mesh_processing/polygon_soup_to_polygon_mesh.h>
 
+using Kernel = CGAL::Simple_cartesian<double>;
+using Point_3 = Kernel::Point_3;
+using Mesh = CGAL::Surface_mesh<Point_3>;
+using Traits =
+    CGAL::Surface_mesh_shortest_path_traits<Kernel, Mesh>;
+using Solver =
+    CGAL::Surface_mesh_shortest_path<Traits>;
+
+using Graph_traits = boost::graph_traits<Mesh>;
+using Bary = Traits::Barycentric_coordinates;
+using FT = Traits::FT;
+using vertex_descriptor = typename Graph_traits::vertex_descriptor;
+using face_descriptor = typename Graph_traits::face_descriptor;
+using halfedge_descriptor = typename Graph_traits::halfedge_descriptor;
+using Simplex = std::variant<vertex_descriptor,
+                                std::pair<halfedge_descriptor, double>,
+                                std::pair<face_descriptor, Traits::Barycentric_coordinates>>;
+
 class GeodesicSolver
 {
 public:
-    using Kernel = CGAL::Simple_cartesian<double>;
-    using Mesh = CGAL::Surface_mesh<Kernel::Point_3>;
-    using Traits =
-        CGAL::Surface_mesh_shortest_path_traits<Kernel, Mesh>;
-    using Solver =
-        CGAL::Surface_mesh_shortest_path<Traits>;
-
-    using Graph_traits = boost::graph_traits<Mesh>;
-    using Bary = Traits::Barycentric_coordinates;
-    using FT = Traits::FT;
-    using vertex_descriptor = typename Graph_traits::vertex_descriptor;
-    using face_descriptor = typename Graph_traits::face_descriptor;
-    using halfedge_descriptor = typename Graph_traits::halfedge_descriptor;
-    using Simplex = std::variant<vertex_descriptor,
-                                 std::pair<halfedge_descriptor, double>,
-                                 std::pair<face_descriptor, Traits::Barycentric_coordinates>>;
 
     void init(
         const float *vertices,
@@ -62,6 +64,8 @@ private:
     // std::vector<float> path_buffer_;
     // std::vector<int> face_buffer_;
     std::vector<float> unified_path_buffer_;
+    std::vector<int> visited_stamp_;
+    int current_stamp_ = 0;
 
     bool canonicalize_barycentric(Bary& b);
     

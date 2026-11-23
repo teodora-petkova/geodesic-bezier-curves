@@ -43,14 +43,12 @@ wasm_debug: OPT_FLAGS = -O0 -g4
 wasm_debug: ASSERT_FLAGS = -s ASSERTIONS=2
 
 # Production configuration: Maximum optimization, minified output, strip debug symbols
-wasm_release: OPT_FLAGS = -O3
-wasm_release: ASSERT_FLAGS = -s ASSERTIONS=0
+wasm_release: OPT_FLAGS = -O3 -DNDEBUG -msimd128 -flto
+wasm_release: ASSERT_FLAGS = -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=1 -fexceptions
 
 # --- Build Targets ---
 
 .PHONY: all debug release clean
-
-all: debug
 
 wasm_debug: wasm_compile
 	@echo "WASM debug build finished successfully."
